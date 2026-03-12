@@ -1,0 +1,164 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Exam {
+  id                String               @id @default(cuid())
+  slug              String               @unique // "ssc-cgl-2026-tier-1"
+  name              String               // "SSC CGL 2026 Tier 1"
+  board             String               // "SSC", "RRB", "NTA", "GATE", "CAT"
+  examDate          DateTime
+  totalQuestions    Int
+  totalMarks        Float
+  duration          Int                  // minutes
+  negativeMarking   Boolean              @default(true)
+  markingScheme     Json                 // { correct: 2, wrong: -0.5, unattempted: 0 }
+
+  schemas           ExamSchema[]
+  sessions          UserSession[]
+  solutions         Solution[]
+  statistics        QuestionStatistics[]
+  challenges        Challenge[]
+
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+
+  @@index([board, examDate])
+  @@index([slug])
+}
+
+model ExamSchema {
+  id                String               @id @default(cuid())
+  examId            String
+  exam              Exam                 @relation(fields: [examId], references: [id])
+
+  schemaVersion     String               // "v1", "v2" - for schema evolution
+  extractedSchema   Json                 // Gemini-generated parsing instructions
+  samplePdfUrl      String               // S3 URL of the sample PDF used
+  confidence        Float                // 0-1, Gemini's confidence in schema
+  usageCount        Int                  @default(0) // How many times reused
+
+  createdAt         DateTime             @default(now())
+
+  @@unique([examId, schemaVersion])
+  @@index([examId, confidence])
+}
+
+model UserSession {
+  id                String               @id @default(cuid())
+  sessionToken      String               @unique // Anonymous token (not cookie)
+  examId            String
+  exam              Exam                 @relation(fields: [examId], references: [id])
+
+  pdfUrl            String?              // S3 URL if uploaded
+  externalUrl       String?              // Original URL if pasted
+  parsingStatus     String               // "pending", "parsing", "completed", "failed"
+  schemaUsed        String?              // Which schema version was used
+
+  totalScore        Float                @default(0)
+  correctCount      Int                  @default(0)
+  wrongCount        Int                  @default(0)
+  skippedCount      Int                  @default(0)
+  currentRank       Int?                 // Updated periodically
+
+  answers           UserAnswer[]
+
+  createdAt         DateTime             @default(now())
+  expiresAt         DateTime             // 30 days from creation (GDPR compliance)
+
+  @@index([examId, totalScore])
+  @@index([sessionToken])
+  @@index([expiresAt]) // For cleanup job
+}
+
+model UserAnswer {
+  id                String               @id @default(cuid())
+  sessionId         String
+  session           UserSession          @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  examId            String               // Denormalized for partitioning
+
+  questionNumber    Int
+  questionText      String?              // Optional, extracted from PDF
+  options           Json?                // { A: "text", B: "text", C: "text", D: "text" }
+  userAnswer        String?              // "A", "B", "C", "D", null (skipped)
+  correctAnswer     String               // "A", "B", "C", "D"
+
+  isCorrect         Boolean
+  marksAwarded      Float
+
+  createdAt         DateTime             @default(now())
+
+  @@unique([sessionId, questionNumber])
+  @@index([examId, questionNumber])
+  @@index([examId, sessionId, marksAwarded])
+}
+
+model Solution {
+  id                String               @id @default(cuid())
+  examId            String
+  exam              Exam                 @relation(fields: [examId], references: [id])
+  questionNumber    Int
+
+  questionText      String               @db.Text
+  options           Json                 // { A: "text", B: "text", C: "text", D: "text" }
+  correctAnswer     String               // "A", "B", "C", "D"
+
+  explanation       String               @db.Text // Gemini-generated explanation
+  latexContent      String?              @db.Text // LaTeX for mathematical formulas
+  imageUrls         Json?                // Array of S3 URLs for diagrams
+
+  generationStatus  String               // "pending", "generating", "completed", "failed"
+  aiModel           String               @default("gemini-3-flash")
+  confidence        Float?               // 0-1, Gemini's confidence
+
+  viewCount         Int                  @default(0)
+
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+
+  @@unique([examId, questionNumber])
+  @@index([examId, questionNumber])
+  @@index([generationStatus])
+}
+
+model QuestionStatistics {
+  id                String               @id @default(cuid())
+  examId            String
+  exam              Exam                 @relation(fields: [examId], references: [id])
+  questionNumber    Int
+
+  totalAttempts     Int                  @default(0)
+  correctAttempts   Int                  @default(0)
+  wrongAttempts     Int                  @default(0)
+  skippedAttempts   Int                  @default(0)
+
+  accuracyRate      Float                @default(0) // correctAttempts / totalAttempts
+
+  updatedAt         DateTime             @updatedAt
+
+  @@unique([examId, questionNumber])
+  @@index([examId, accuracyRate])
+}
+
+model Challenge {
+  id                String               @id @default(cuid())
+  examId            String
+  exam              Exam                 @relation(fields: [examId], references: [id])
+  questionNumber    Int
+
+  challengeType     String               // "wrong_answer", "wrong_question", "ambiguous"
+  description       String?              @db.Text
+
+  totalChallenges   Int                  @default(0) // How many users reported
+
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+
+  @@unique([examId, questionNumber])
+  @@index([examId, totalChallenges])
+}
