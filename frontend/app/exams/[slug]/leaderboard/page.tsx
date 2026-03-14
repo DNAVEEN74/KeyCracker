@@ -59,80 +59,84 @@ export default function LeaderboardPage({ params }: { params: Promise<{ slug: st
 
     return (
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 pb-4 border-b border-border">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 pb-6 border-b border-border">
                 <div>
-                    <h1 className="text-xl font-semibold tracking-tight text-foreground flex items-center gap-2">
-                        <Trophy className="text-primary w-5 h-5" />
+                    <h1 className="text-2xl font-extrabold tracking-tight text-prussian-blue flex items-center gap-3">
+                        <Trophy className="text-primary w-6 h-6" />
                         Live Leaderboard
                     </h1>
-                    <p className="mt-1 text-xs text-muted-foreground font-mono uppercase tracking-wider">{slug}</p>
+                    <p className="mt-1 text-[10px] text-muted-foreground font-bold uppercase tracking-[0.2em]">{slug}</p>
                 </div>
-                <div className="mt-4 md:mt-0 flex items-center gap-3">
+                <div className="mt-4 md:mt-0 flex items-center gap-4">
                     <Link
                         href={`/exams/${slug}/analysis`}
-                        className="text-xs font-medium text-foreground hover:text-primary transition-colors border border-border bg-secondary/50 px-3 py-1.5 rounded flex items-center gap-1.5"
+                        className="text-[11px] font-bold uppercase tracking-widest text-prussian-blue hover:text-primary transition-colors border border-border bg-white shadow-sm px-4 py-2 rounded-lg flex items-center gap-2"
                     >
                         My Analysis
                     </Link>
-                    <div className="flex items-center gap-1.5 px-2 py-1 bg-success/10 border border-success/20 text-success rounded text-xs font-medium">
+                    <div className="flex items-center gap-2 px-3 py-1.5 bg-success/[0.05] border border-success/10 text-success rounded-full text-[10px] font-bold uppercase tracking-widest">
                         <div className="w-1.5 h-1.5 rounded-full bg-success animate-pulse"></div>
                         Live Connect
                     </div>
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                <div className="p-4 linear-surface rounded-md flex items-center gap-3">
-                    <div className="text-muted-foreground"><Users className="w-4 h-4" /></div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <div className="p-6 razorpay-card bg-white flex items-center gap-4">
+                    <div className="p-3 bg-secondary/50 rounded-xl text-muted-foreground"><Users className="w-5 h-5" /></div>
                     <div>
-                        <p className="text-[11px] uppercase tracking-wider text-muted-foreground">Total Participants</p>
-                        <p className="text-lg font-semibold">{metrics?.totalParticipants?.toLocaleString?.() ?? '--'}</p>
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-1">Total Participants</p>
+                        <p className="text-xl font-extrabold text-prussian-blue">{metrics?.totalParticipants?.toLocaleString?.() ?? '--'}</p>
                     </div>
                 </div>
-                <div className="p-4 linear-surface rounded-md flex items-center gap-3">
-                    <div className="text-muted-foreground"><TrendingUp className="w-4 h-4" /></div>
+                <div className="p-6 razorpay-card bg-white flex items-center gap-4 border-l-4 border-l-dodger-blue">
+                    <div className="p-3 bg-primary/[0.05] rounded-xl text-primary"><TrendingUp className="w-5 h-5" /></div>
                     <div>
-                        <p className="text-[11px] uppercase tracking-wider text-muted-foreground">Average Score</p>
-                        <p className="text-lg font-semibold">{metrics?.averageScore?.toFixed?.(2) ?? '--'}</p>
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-1">Average Score</p>
+                        <p className="text-xl font-extrabold text-prussian-blue">{metrics?.averageScore?.toFixed?.(2) ?? '--'}</p>
                     </div>
                 </div>
-                <div className="p-4 linear-surface rounded-md flex items-center gap-3">
-                    <div className="text-primary"><Trophy className="w-4 h-4" /></div>
+                <div className="p-6 razorpay-card bg-white flex items-center gap-4 border-l-4 border-l-primary">
+                    <div className="p-3 bg-primary/[0.05] rounded-xl text-primary"><Trophy className="w-5 h-5" /></div>
                     <div>
-                        <p className="text-[11px] uppercase tracking-wider text-muted-foreground">Highest Score</p>
-                        <p className="text-lg font-semibold text-primary">{metrics?.highestScore?.toFixed?.(2) ?? '--'}</p>
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-1">Highest Score</p>
+                        <p className="text-xl font-extrabold text-primary">{metrics?.highestScore?.toFixed?.(2) ?? '--'}</p>
                     </div>
                 </div>
             </div>
 
-            <div className="linear-surface rounded-md overflow-hidden">
+            <div className="razorpay-card bg-white overflow-hidden border-none shadow-xl">
                 <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse text-sm">
                         <thead>
-                            <tr className="bg-secondary/50 border-b border-border text-xs tracking-wider text-muted-foreground uppercase">
-                                <th className="px-4 py-2 font-medium w-16 text-center">Rnk</th>
-                                <th className="px-4 py-2 font-medium">User ID</th>
-                                <th className="px-4 py-2 font-medium text-right">Score</th>
+                            <tr className="bg-[#fbfcff] border-b border-border/60 text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground">
+                                <th className="px-6 py-4 w-20 text-center">Rank</th>
+                                <th className="px-6 py-4">Participant ID</th>
+                                <th className="px-6 py-4 text-right">Raw Score</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-border font-mono text-[13px]">
+                        <tbody className="divide-y divide-border/50 font-mono text-sm">
                             {leaderboard.map((user) => (
                                 <tr
                                     key={user.id}
-                                    className={`transition-colors hover:bg-secondary/50 ${user.rank <= 3 ? 'bg-primary/5 text-primary' : 'text-foreground'}`}
+                                    className={`transition-all hover:bg-secondary/[0.3] ${user.rank <= 3 ? 'bg-primary/[0.02] text-primary' : 'text-secondary-foreground'}`}
                                 >
-                                    <td className="px-4 py-2 text-center">{String(user.rank).padStart(2, '0')}</td>
-                                    <td className="px-4 py-2">
-                                        <span className={user.rank <= 3 ? 'font-semibold' : ''}>usr_{user.id.slice(-6)}</span>
+                                    <td className="px-6 py-4 text-center">
+                                        <span className={`inline-flex items-center justify-center w-8 h-8 rounded-full ${user.rank <= 3 ? 'bg-primary text-primary-foreground font-bold border-2 border-primary/20' : 'font-semibold text-muted-foreground'}`}>
+                                            {user.rank}
+                                        </span>
                                     </td>
-                                    <td className="px-4 py-2 text-right">
-                                        <span className={`font-semibold ${user.rank <= 3 ? '' : 'text-foreground/80'}`}>{Number(user.score).toFixed(1)}</span>
+                                    <td className="px-6 py-4">
+                                        <span className={`tracking-tight ${user.rank <= 3 ? 'font-extrabold' : 'font-medium'}`}>usr_{user.id.slice(-6).toUpperCase()}</span>
+                                    </td>
+                                    <td className="px-6 py-4 text-right">
+                                        <span className={`text-base font-extrabold ${user.rank <= 3 ? '' : 'text-prussian-blue'}`}>{Number(user.score).toFixed(1)}</span>
                                     </td>
                                 </tr>
                             ))}
                             {leaderboard.length === 0 && (
                                 <tr>
-                                    <td colSpan={3} className="px-4 py-6 text-center text-muted-foreground">
+                                    <td colSpan={3} className="px-6 py-12 text-center text-muted-foreground font-medium">
                                         No completed attempts yet.
                                     </td>
                                 </tr>

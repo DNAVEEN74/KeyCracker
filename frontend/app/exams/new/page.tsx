@@ -120,27 +120,29 @@ export default function NewExamPage() {
                 </p>
             </div>
 
-            <div className="flex flex-col md:flex-row gap-6">
+            <div className="flex flex-col md:flex-row gap-8">
                 {/* File Upload Section */}
                 <div className="flex-1 relative group">
                     <label
                         htmlFor="file-upload"
-                        className={`flex flex-col items-center justify-center w-full h-48 rounded-md border border-dashed transition-colors cursor-pointer linear-surface ${error ? 'border-destructive bg-destructive/5' : 'border-border hover:border-primary/50 hover:bg-secondary/20'}`}
+                        className={`flex flex-col items-center justify-center w-full h-56 rounded-xl border border-dashed transition-all cursor-pointer razorpay-card bg-[#fcfdfe] ${error ? 'border-destructive bg-destructive/5' : 'border-border hover:border-primary/40 hover:bg-primary/[0.01]'}`}
                     >
                         {isUploading ? (
-                            <div className="flex flex-col items-center space-y-3">
-                                <Loader2 className="w-5 h-5 text-primary animate-spin" />
-                                <p className="text-sm font-medium text-foreground">AI is analyzing...</p>
-                                <p className="text-xs text-muted-foreground">Identifying exam and extracting schema</p>
+                            <div className="flex flex-col items-center space-y-4">
+                                <Loader2 className="w-8 h-8 text-primary animate-spin" />
+                                <div className="text-center">
+                                    <p className="text-sm font-bold text-prussian-blue">AI is analyzing...</p>
+                                    <p className="text-[10px] text-muted-foreground mt-1 uppercase tracking-wider font-bold">Identifying exam and extracting schema</p>
+                                </div>
                             </div>
                         ) : (
-                            <div className="flex flex-col items-center space-y-3">
-                                <div className="p-2 bg-secondary rounded text-muted-foreground group-hover:text-primary transition-colors">
-                                    <UploadCloud className="w-5 h-5" />
+                            <div className="flex flex-col items-center space-y-4">
+                                <div className="p-3 bg-primary/[0.07] rounded-xl text-primary group-hover:scale-110 transition-transform">
+                                    <UploadCloud className="w-6 h-6" />
                                 </div>
                                 <div className="text-center">
-                                    <p className="text-sm font-medium text-foreground">Click or drag file here</p>
-                                    <p className="text-xs text-muted-foreground mt-1">Official PDF up to 10MB</p>
+                                    <p className="text-base font-extrabold text-prussian-blue">Click or drag file here</p>
+                                    <p className="text-[10px] text-muted-foreground mt-1 uppercase tracking-widest font-bold">Official PDF up to 10MB</p>
                                 </div>
                             </div>
                         )}
@@ -156,30 +158,32 @@ export default function NewExamPage() {
                 </div>
 
                 <div className="hidden md:flex flex-col items-center justify-center -mx-2">
-                    <div className="h-full w-px bg-border/50"></div>
-                    <span className="py-2 text-[10px] font-bold uppercase tracking-widest text-muted-foreground bg-background">OR</span>
-                    <div className="h-full w-px bg-border/50"></div>
+                    <div className="h-full w-px bg-border"></div>
+                    <span className="py-2 text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground bg-white">OR</span>
+                    <div className="h-full w-px bg-border"></div>
                 </div>
 
                 {/* URL Paste Section */}
-                <div className="flex-1 flex flex-col justify-center linear-surface border border-border rounded-md p-6">
-                    <div className="flex items-center gap-2 mb-4">
-                        <Link2 className="w-4 h-4 text-primary" />
-                        <h3 className="text-sm font-medium text-foreground">Paste TCS iON Response Sheet URL</h3>
+                <div className="flex-1 flex flex-col justify-center razorpay-card p-8 bg-white">
+                    <div className="flex items-center gap-3 mb-6">
+                        <div className="p-2 bg-primary/[0.07] rounded-lg">
+                            <Link2 className="w-5 h-5 text-primary" />
+                        </div>
+                        <h3 className="text-base font-bold text-prussian-blue">Paste TCS iON URL</h3>
                     </div>
-                    <form onSubmit={handleUrlSubmit} className="flex flex-col gap-3">
+                    <form onSubmit={handleUrlSubmit} className="flex flex-col gap-4">
                         <input
                             type="url"
                             placeholder="https://g26.digialm.com/..."
                             value={url}
                             onChange={(e) => setUrl(e.target.value)}
                             disabled={isUploading}
-                            className="w-full bg-background border border-border rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary text-foreground placeholder:text-muted-foreground/50 transition-all font-mono"
+                            className="w-full bg-[#f9fafb] border border-border rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-4 focus:ring-primary/[0.08] focus:border-primary text-foreground placeholder:text-muted-foreground/30 transition-all font-mono"
                         />
                         <button
                             type="submit"
                             disabled={isUploading || !url}
-                            className="w-full text-xs font-medium bg-primary text-primary-foreground py-2.5 rounded shadow-sm hover:bg-primary/90 disabled:opacity-50 transition-colors hov-scale"
+                            className="w-full text-[11px] font-bold uppercase tracking-widest bg-primary text-primary-foreground py-3.5 rounded-lg shadow-lg shadow-primary/10 hover:bg-primary/95 disabled:opacity-50 transition-all razorpay-button"
                         >
                             {isUploading ? 'Parsing Link...' : 'Fetch & Parse Link'}
                         </button>
@@ -188,20 +192,22 @@ export default function NewExamPage() {
             </div>
 
             {error && (
-                <p className="mt-4 text-sm text-destructive font-medium">{error}</p>
+                <div className="mt-6 p-4 bg-destructive/[0.03] border border-destructive/10 rounded-lg">
+                    <p className="text-sm text-destructive font-bold text-center">{error}</p>
+                </div>
             )}
 
-            <div className="mt-8 p-5 linear-surface rounded-md text-left">
-                <div className="flex items-start gap-3">
-                    <div className="text-muted-foreground mt-0.5">
-                        <FileText className="w-4 h-4" />
+            <div className="mt-12 p-8 razorpay-card bg-[#fbfcfd] border-primary/10">
+                <div className="flex items-start gap-4">
+                    <div className="text-primary mt-1 p-2 bg-primary/[0.07] rounded-lg">
+                        <FileText className="w-5 h-5" />
                     </div>
                     <div>
-                        <h3 className="text-sm font-semibold text-foreground">How it works</h3>
-                        <ul className="mt-2 text-xs text-muted-foreground space-y-1.5 list-disc list-inside">
-                            <li>Upload the PDF exported from the official exam portal (TCS iON / DigiAlm).</li>
-                            <li>Our AI will auto-detect the exam name, board, date, and marking scheme.</li>
-                            <li>A reusable parsing schema is saved — future uploads for the same exam are instant.</li>
+                        <h3 className="text-lg font-bold text-prussian-blue">How it works</h3>
+                        <ul className="mt-4 text-sm text-secondary-foreground space-y-3 list-none">
+                            <li className="flex items-center gap-3"><div className="w-1.5 h-1.5 rounded-full bg-primary" /> Upload PDF exported from portal (TCS iON / DigiAlm).</li>
+                            <li className="flex items-center gap-3"><div className="w-1.5 h-1.5 rounded-full bg-primary" /> AI auto-detects name, board, and marking scheme.</li>
+                            <li className="flex items-center gap-3"><div className="w-1.5 h-1.5 rounded-full bg-primary" /> Reusable schema is saved for instant future uploads.</li>
                         </ul>
                     </div>
                 </div>

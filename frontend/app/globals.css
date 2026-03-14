@@ -1,41 +1,44 @@
 @import "tailwindcss";
 
 :root {
-  /* Linear-style dark mode by default */
-  --background: #0e0f11;
-  --foreground: #f4f4f5;
+  color-scheme: dark;
+  /* Razorpay Sprint '26 Official Palette */
+  --background: #151515; /* The "Black" */
+  --foreground: #ffffff;
 
-  --card: #18191d;
-  --card-foreground: #ededed;
+  --card: #2c2c2c; /* The "Grey" for surfaces */
+  --card-foreground: #ffffff;
 
-  --popover: #1b1d22;
-  --popover-foreground: #ededed;
+  --popover: #151515;
+  --popover-foreground: #ffffff;
 
-  /* Linear Indigo/Purple */
-  --primary: #5e6ad2;
+  /* Razorpay Blue */
+  --primary: #305eff;
   --primary-foreground: #ffffff;
 
-  --secondary: #222429;
-  --secondary-foreground: #e2e2e3;
+  /* Accent Highlight */
+  --accent-yellow: #e3f51a;
 
-  --muted: #212225;
-  --muted-foreground: #8a8f98;
+  --secondary: #2c2c2c;
+  --secondary-foreground: #777777;
 
-  --accent: #2e3036;
+  --muted: #2c2c2c;
+  --muted-foreground: #777777;
+
+  --accent: #305eff;
   --accent-foreground: #ffffff;
 
-  --success: #28a745;
+  --success: #27ae60;
   --success-foreground: #ffffff;
 
-  --destructive: #e5484d;
+  --destructive: #e11d48;
   --destructive-foreground: #ffffff;
 
-  /* Crisp, subtle borders */
-  --border: #222326;
-  --ring: #5e6ad2;
+  /* Razorpay signature borders */
+  --border: rgba(255, 255, 255, 0.1);
+  --ring: #305eff;
 
-  --radius: 0.5rem;
-  /* Tighter corner radius */
+  --radius: 0;
 }
 
 @theme inline {
@@ -59,6 +62,9 @@
   --color-destructive-foreground: var(--destructive-foreground);
   --color-border: var(--border);
   --color-ring: var(--ring);
+  --color-rzp-blue: var(--primary);
+  --color-rzp-yellow: var(--accent-yellow);
+  --color-rzp-green: var(--success);
 
   --font-sans: var(--font-inter);
 }
@@ -69,33 +75,74 @@ body {
   font-family: var(--font-inter), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  line-height: 1.5;
-  letter-spacing: -0.01em;
+  line-height: 1.6;
+  letter-spacing: -0.011em;
 }
 
-/* Linear-style Surface utilities */
+h1, h2, h3, h4 {
+  color: var(--foreground);
+  font-weight: 700;
+}
+
+/* Razorpay-style Surface utilities */
 .glass {
-  /* Linear rarely uses heavy glass, but for floating navs they use a slight blur over dark grays */
-  background: rgba(14, 15, 17, 0.85);
+  background: rgba(21, 21, 21, 0.8);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--border);
 }
 
-.linear-surface {
+.razorpay-card {
   background: var(--card);
   border: 1px solid var(--border);
-  box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.05), 0 2px 8px 0 rgba(0, 0, 0, 0.4);
+  border-radius: 0;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.4);
 }
 
-.linear-button {
-  box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.1);
+.razorpay-card:hover {
+  border-color: var(--primary);
+  transform: translateY(-4px);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
 }
 
-.hov-scale {
-  transition: transform 0.1s cubic-bezier(0.2, 0, 0, 1), background-color 0.1s linear;
+.razorpay-button {
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  font-weight: 600;
+}
+
+.razorpay-button:hover {
+  filter: brightness(1.05);
+  box-shadow: 0 10px 15px -3px rgba(51, 149, 255, 0.3);
+  transform: translateY(-1px);
 }
 
 .hov-scale:hover {
-  transform: scale(0.98);
+  transform: scale(1.02);
 }
+
+/* Neural Background Effects */
+.neural-grid {
+  background-image: 
+    linear-gradient(to right, rgba(255, 255, 255, 0.08) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.08) 1px, transparent 1px);
+  background-size: 60px 60px;
+}
+
+@keyframes neural-pulse {
+  0%, 100% { opacity: 0.1; transform: scale(1); }
+  50% { opacity: 0.2; transform: scale(1.05); }
+}
+
+.animate-neural-pulse {
+  animation: neural-pulse 10s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-20px); }
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}

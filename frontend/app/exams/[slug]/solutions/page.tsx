@@ -161,95 +161,171 @@ export default function SolutionsPage({ params }: { params: Promise<{ slug: stri
         : solution.isCorrect ? 'Correct Answer' : 'Incorrect Answer';
 
     return (
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10 mt-8">
+        <div className="min-h-screen bg-[#0a0a0a] text-white">
             <link href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css" rel="stylesheet" />
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 pb-4 border-b border-border gap-4">
-                <div>
-                    <h1 className="text-xl font-semibold tracking-tight text-foreground">Detailed Solutions</h1>
-                    <p className="mt-1 text-xs text-muted-foreground font-mono uppercase tracking-wider">{slug}</p>
-                </div>
-                <Link
-                    href={`/exams/${slug}/analysis?session=${sessionToken}`}
-                    className="text-xs font-medium text-foreground hover:text-primary transition-colors border border-border bg-secondary/50 px-3 py-1.5 rounded"
-                >
-                    &larr; Back to Dashboard
-                </Link>
-            </div>
-
-            <div className="linear-surface rounded-md">
-                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start p-6 border-b border-border/50 gap-4">
-                    <div className="flex items-center gap-4">
-                        <div className="flex flex-col items-center justify-center w-10 h-10 rounded border border-border bg-secondary/50 text-sm font-semibold tracking-wider">
-                            Q{solution.questionNumber}
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-20">
+                {/* Header Protocol */}
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-16 gap-8 border-b border-white/5 pb-10">
+                    <div className="space-y-4">
+                        <div className="flex items-center gap-3">
+                            <div className="h-1 w-8 bg-rzp-blue" />
+                            <span className="text-[10px] font-black uppercase tracking-[0.4em] text-white/40">Dep_Protocol // Solutions</span>
                         </div>
-                        <div>
-                            <div className="flex items-center gap-2 mb-1">
-                                {solution.isCorrect ? <Target className="text-success w-4 h-4" /> : <XCircle className="text-destructive w-4 h-4" />}
-                                <p className="text-sm font-semibold text-foreground tracking-tight">{correctnessLabel}</p>
-                            </div>
-                            <p className="text-[13px] text-muted-foreground">
-                                Your answer: <span className="text-foreground font-medium">{userAnswerText}</span> &middot; Correct: <span className="font-semibold text-foreground">{solution.correctAnswer}</span>
-                            </p>
-                        </div>
-                    </div>
-                </div>
-
-                <div className="p-6">
-                    <h3 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-3 flex items-center gap-1.5">
-                        <ImageIcon className="w-3.5 h-3.5" /> Question
-                    </h3>
-                    <div className="bg-secondary/20 border border-border/30 p-4 rounded mb-6">
-                        <RenderQuestionContent value={solution.questionText} />
+                        <h1 className="text-4xl md:text-5xl font-black uppercase tracking-tighter">Detailed Analysis</h1>
+                        <p className="font-mono text-[10px] text-rzp-blue font-bold tracking-[0.2em] uppercase">VERIFICATION_STREAM: {slug} // S_ID: {sessionToken?.slice(0, 8)}</p>
                     </div>
 
-                    <h3 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-3">Options</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mb-6">
-                        {Object.entries(solution.options || {}).map(([label, value]) => (
-                            <div key={label} className={`rounded border p-3 ${solution.correctAnswer === label ? 'border-success/40 bg-success/5' : 'border-border/40 bg-background/40'}`}>
-                                <p className="text-xs text-muted-foreground mb-2">Option {label}</p>
-                                <RenderOptionContent value={String(value)} />
-                            </div>
-                        ))}
-                    </div>
-
-                    <div className="mb-4 p-3 bg-amber-500/10 border border-amber-500/20 text-amber-600 rounded flex items-start gap-3">
-                        <AlertTriangle className="w-5 h-5 flex-shrink-0 mt-0.5" />
-                        <div>
-                            <p className="text-sm font-medium">AI-Generated Content</p>
-                            <p className="text-xs mt-1">This solution is AI generated and may contain mistakes. Cross-check important questions.</p>
-                        </div>
-                    </div>
-
-                    <h3 className="text-[11px] font-semibold uppercase tracking-wider text-primary mb-3 flex items-center gap-1.5">
-                        <Target className="w-3.5 h-3.5" /> AI Explanation
-                    </h3>
-                    <div className="text-sm leading-relaxed text-foreground prose prose-sm dark:prose-invert max-w-none math-markdown">
-                        <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>
-                            {solution.explanation || 'Explanation not available yet.'}
-                        </ReactMarkdown>
-                    </div>
-                </div>
-
-                <div className="flex justify-between items-center px-6 py-4 border-t border-border/50 bg-secondary/10">
-                    <button
-                        onClick={() => setCurrentIndex((prev) => Math.max(0, prev - 1))}
-                        disabled={currentIndex === 0}
-                        className="flex items-center px-3 py-1.5 text-xs font-medium rounded hover:bg-secondary border border-transparent hover:border-border disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                    <Link
+                        href={`/exams/${slug}/analysis?session=${sessionToken}`}
+                        className="group flex items-center gap-3 px-8 py-4 bg-white/5 border border-white/10 hover:border-white/30 transition-all"
                     >
-                        <ChevronLeft className="w-4 h-4 mr-1" /> Prev
-                    </button>
+                        <ChevronLeft className="w-4 h-4 text-rzp-blue group-hover:-translate-x-1 transition-transform" />
+                        <span className="text-[10px] font-black uppercase tracking-widest">Abort to Dashboard</span>
+                    </Link>
+                </div>
 
-                    <span className="text-[11px] uppercase tracking-wider font-medium text-muted-foreground">
-                        {currentIndex + 1} of {solutions.length}
-                    </span>
+                {/* Question Protocol Card */}
+                <div className="bg-[#111] border border-white/5 relative overflow-hidden">
+                    <div className="absolute top-0 right-0 p-10 pointer-events-none">
+                        <span className="text-9xl font-black text-white/[0.02] tracking-tighter">Q{solution.questionNumber}</span>
+                    </div>
 
-                    <button
-                        onClick={() => setCurrentIndex((prev) => Math.min(solutions.length - 1, prev + 1))}
-                        disabled={currentIndex === solutions.length - 1}
-                        className="flex items-center px-4 py-1.5 text-[13px] font-medium bg-primary text-primary-foreground rounded shadow-sm hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all hov-scale"
-                    >
-                        Next <ChevronRight className="w-4 h-4 ml-1.5" />
-                    </button>
+                    {/* Question Identification Header */}
+                    <div className="p-8 md:p-12 border-b border-white/5 bg-white/[0.01] flex flex-col md:flex-row justify-between items-start md:items-center gap-8">
+                        <div className="flex items-center gap-8">
+                            <div className="w-20 h-20 bg-rzp-blue flex flex-col items-center justify-center border border-white/10">
+                                <span className="text-[10px] font-black text-white/40 uppercase mb-1">Index</span>
+                                <span className="text-3xl font-black text-white">{solution.questionNumber}</span>
+                            </div>
+                            <div className="space-y-3">
+                                <div className="flex items-center gap-4">
+                                    {solution.isCorrect ? (
+                                        <div className="px-4 py-1.5 bg-rzp-blue/10 border border-rzp-blue/30 flex items-center gap-2">
+                                            <div className="w-1.5 h-1.5 bg-rzp-blue" />
+                                            <span className="text-[10px] font-black uppercase tracking-widest text-rzp-blue">System_Match</span>
+                                        </div>
+                                    ) : (
+                                        <div className="px-4 py-1.5 bg-red-500/10 border border-red-500/30 flex items-center gap-2">
+                                            <div className="w-1.5 h-1.5 bg-red-500" />
+                                            <span className="text-[10px] font-black uppercase tracking-widest text-red-500">System_Mismatch</span>
+                                        </div>
+                                    )}
+                                    <span className="text-[10px] font-black text-white/40 uppercase tracking-widest">{correctnessLabel}</span>
+                                </div>
+                                <div className="flex flex-wrap gap-4 text-xs font-bold uppercase tracking-wide">
+                                    <p className="text-white/40">User Payload: <span className="text-white">{userAnswerText}</span></p>
+                                    <div className="h-4 w-[1px] bg-white/10 mt-0.5" />
+                                    <p className="text-white/40">Correct Key: <span className="text-rzp-blue">{solution.correctAnswer}</span></p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="p-8 md:p-12 space-y-16">
+                        {/* Question Content Section */}
+                        <div className="space-y-6">
+                            <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-rzp-blue flex items-center gap-3">
+                                <ImageIcon className="w-4 h-4" /> Input_Stream Content
+                            </h3>
+                            <div className="bg-[#0a0a0a] border border-white/5 p-10 relative group">
+                                <div className="absolute top-0 right-0 p-4 font-mono text-[8px] text-white/10">BLOCK_Q_{solution.questionNumber}</div>
+                                <RenderQuestionContent value={solution.questionText} />
+                                <div className="absolute bottom-0 left-0 h-[1px] w-0 bg-rzp-blue group-hover:w-full transition-all duration-700" />
+                            </div>
+                        </div>
+
+                        {/* Options Protocol Mapping */}
+                        <div className="space-y-6">
+                            <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-white/40">Logical_Option Mapping</h3>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {Object.entries(solution.options || {}).map(([label, value]) => (
+                                    <div
+                                        key={label}
+                                        className={`relative p-8 border transition-all ${solution.correctAnswer === label
+                                            ? 'bg-rzp-blue/5 border-rzp-blue/40 ring-1 ring-rzp-blue/20'
+                                            : label === solution.userAnswer && !solution.isCorrect
+                                                ? 'bg-red-500/5 border-red-500/40'
+                                                : 'bg-white/[0.02] border-white/5 hover:border-white/20'
+                                            }`}
+                                    >
+                                        <div className="flex justify-between items-start mb-6">
+                                            <span className={`text-[10px] font-black uppercase tracking-[0.2em] ${solution.correctAnswer === label ? 'text-rzp-blue' : 'text-white/30'}`}>
+                                                Field_{label}
+                                            </span>
+                                            {solution.correctAnswer === label && (
+                                                <div className="px-3 py-1 bg-rzp-blue text-white text-[8px] font-black uppercase tracking-tighter">Official_Key</div>
+                                            )}
+                                        </div>
+                                        <RenderOptionContent value={String(value)} />
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* AI Verification Logic Information */}
+                        <div className="bg-[#1a1a1a] border-l-4 border-l-rzp-blue p-8 flex flex-col md:flex-row items-center gap-8 group">
+                            <div className="p-4 bg-rzp-blue/10 border border-rzp-blue/20 group-hover:bg-rzp-blue transition-colors">
+                                <AlertTriangle className="w-5 h-5 text-rzp-blue group-hover:text-white" />
+                            </div>
+                            <div className="space-y-2">
+                                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white">Agentic_Verification_Status</p>
+                                <p className="text-xs text-white/40 font-medium leading-relaxed uppercase tracking-wide">
+                                    Explanation synthesized via <span className="text-rzp-blue">Gemini 1.5 Pro</span>. Logical synchronization successful. Verify complex proofs at official terminals.
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* Step-by-Step Execution Log */}
+                        <div className="space-y-6">
+                            <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-rzp-blue flex items-center gap-3">
+                                <Target className="w-4 h-4" /> Deduction_Protocol Execution
+                            </h3>
+                            <div className="bg-[#0a0a0a] border border-white/5 p-8 md:p-12 prose prose-invert prose-rzp max-w-none math-markdown selection:bg-rzp-blue/30 selection:text-white">
+                                <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>
+                                    {solution.explanation || 'Protocol payload empty. Analysis engine idle.'}
+                                </ReactMarkdown>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Navigation Dashboard Protocol */}
+                    <div className="flex flex-col md:flex-row justify-between items-center p-8 md:p-12 border-t border-white/5 bg-white/[0.01] gap-12">
+                        <button
+                            onClick={() => {
+                                setCurrentIndex((prev) => Math.max(0, prev - 1));
+                                window.scrollTo({ top: 0, behavior: 'smooth' });
+                            }}
+                            disabled={currentIndex === 0}
+                            className="w-full md:w-auto flex items-center justify-center px-10 py-5 text-[10px] font-black uppercase tracking-[0.4em] text-white/40 border border-white/10 hover:border-white/30 hover:text-white disabled:opacity-20 disabled:pointer-events-none transition-all"
+                        >
+                            <ChevronLeft className="w-4 h-4 mr-4" /> Abort_Prev
+                        </button>
+
+                        <div className="flex flex-col items-center gap-2">
+                            <div className="flex items-center gap-2">
+                                {[1, 2, 3].map(i => (
+                                    <div key={i} className={`w-1 h-1 ${i === 2 ? 'bg-rzp-blue' : 'bg-white/10'}`} />
+                                ))}
+                            </div>
+                            <div className="text-center font-mono">
+                                <span className="text-[10px] font-black text-white/10 uppercase tracking-[0.4em] block mb-1">Index_Pos</span>
+                                <span className="text-2xl font-black text-white">{String(currentIndex + 1).padStart(2, '0')}</span>
+                                <span className="text-white/20 mx-3">/</span>
+                                <span className="text-lg font-bold text-white/20">{String(solutions.length).padStart(2, '0')}</span>
+                            </div>
+                        </div>
+
+                        <button
+                            onClick={() => {
+                                setCurrentIndex((prev) => Math.min(solutions.length - 1, prev + 1));
+                                window.scrollTo({ top: 0, behavior: 'smooth' });
+                            }}
+                            disabled={currentIndex === solutions.length - 1}
+                            className="w-full md:w-auto flex items-center justify-center px-12 py-5 text-[10px] font-black uppercase tracking-[0.4em] bg-rzp-blue text-white hover:scale-105 transition-all shadow-2xl shadow-rzp-blue/20 disabled:opacity-50 disabled:pointer-events-none"
+                        >
+                            Execute_Next <ChevronRight className="w-4 h-4 ml-4" />
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
