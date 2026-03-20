@@ -1,7 +1,7 @@
-import { Worker } from 'bullmq';
+import { UnrecoverableError, Worker } from 'bullmq';
 import { redisConnection } from '../config/redis';
 import { prisma } from '../config/database';
-import { generateDetailedSolution } from '../services/gemini.service';
+import { GeminiApiError, generateDetailedSolution } from '../services/gemini.service';
 
 export const solutionWorker = new Worker(
     'solution-generation',
@@ -50,13 +50,52 @@ export const solutionWorker = new Worker(
         } catch (error: any) {
             console.error(`Failed generating solution for exam ${examId} question ${questionNumber}:`, error);
 
-            // If Gemini returned a retry delay in the error message, wait before re-throwing
-            // so BullMQ's retry mechanism waits the appropriate time
-            const retryMatch = error?.message?.match(/retry in ([\d.]+)s/i);
-            if (retryMatch) {
-                const waitMs = Math.ceil(parseFloat(retryMatch[1]) * 1000);
-                console.log(`[SolutionWorker] Rate limited — waiting ${waitMs}ms before retry...`);
-                await new Promise(resolve => setTimeout(resolve, waitMs));
+            const geminiError = error instanceof GeminiApiError ? error : null;
+
+            if (geminiError?.isDailyQuotaExceeded) {
+                const fallbackExplanation = 'Solution generation is temporarily unavailable because Gemini API daily quota is exhausted. Please retry later.';
+                const existingSolution = await prisma.solution.findUnique({
+                    where: { examId_questionNumber: { examId, questionNumber } }
+                });
+
+                const failedData = {
+                    examId,
+                    questionNumber,
+                    questionText: questionText || 'No text extracted',
+                    options: options || {},
+                    correctAnswer,
+                    explanation: fallbackExplanation,
+                    latexContent: null,
+                    generationStatus: 'failed',
+                    aiModel: 'gemini-3-flash',
+                    confidence: 0,
+                };
+
+                if (existingSolution) {
+                    await prisma.solution.update({
+                        where: { id: existingSolution.id },
+                        data: failedData
+                    });
+                } else {
+                    await prisma.solution.create({ data: failedData });
+                }
+
+                throw new UnrecoverableError(geminiError.message);
+            }
+
+            // For temporary rate limits, wait for the server-provided delay before retrying.
+            const rateLimitWaitMs = geminiError?.retryDelayMs ?? 0;
+            if (geminiError?.isRateLimited && rateLimitWaitMs > 0) {
+                console.log(`[SolutionWorker] Rate limited - waiting ${rateLimitWaitMs}ms before retry...`);
+                await new Promise(resolve => setTimeout(resolve, rateLimitWaitMs));
+            } else {
+                // Backward-compatible parsing if error was thrown from older code path.
+                const retryMatch = error?.message?.match(/retry in ([\d.]+)s/i);
+                if (retryMatch) {
+                    const waitMs = Math.ceil(parseFloat(retryMatch[1]) * 1000);
+                    console.log(`[SolutionWorker] Rate limited - waiting ${waitMs}ms before retry...`);
+                    await new Promise(resolve => setTimeout(resolve, waitMs));
+                }
             }
 
             throw error;

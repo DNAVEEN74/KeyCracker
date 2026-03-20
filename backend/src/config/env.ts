@@ -7,10 +7,19 @@ const envSchema = z.object({
     REDIS_URL: z.string().url(),
     GEMINI_API_KEY: z.string().min(1), // Used for schema parsing
     GEMINI_SOLUTIONS_API_KEY: z.string().min(1), // Used for generating detailed solutions
+    EXTRACTOR_APP2_URL: z.string().url(),
+    EXTRACTOR_APP_URL: z.string().url(),
+    EXTRACTOR_UPLOAD_PATH: z.string().default('/upload'),
+    EXTRACTOR_OUTPUT_PATH: z.string().default('/output'),
+    EXTRACTOR_HEADER_IMAGE_INDEX: z.coerce.number().int().nonnegative().default(0),
+    IMAGE_MIN_VALID_BYTES: z.coerce.number().int().positive().default(2048),
     AWS_REGION: z.string().optional().default('ap-south-1'),
     AWS_ACCESS_KEY_ID: z.string().optional(),
     AWS_SECRET_ACCESS_KEY: z.string().optional(),
     S3_BUCKET_NAME: z.string().optional().default('keycracker-uploads'),
+    R2_ENDPOINT: z.string().url().optional(),
+    R2_BUCKET_NAME: z.string().optional(),
+    R2_PUBLIC_BASE_URL: z.string().url().optional(),
 });
 
 const parseEnv = () => {

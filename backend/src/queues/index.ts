@@ -4,6 +4,16 @@ import { redisConnection } from '../config/redis';
 // Queue definitions
 export const schemaQueue = new Queue('schema-extraction', { connection: redisConnection });
 export const parsingQueue = new Queue('answer-parsing', { connection: redisConnection });
+export const imagePipelineQueue = new Queue('image-pipeline', {
+    connection: redisConnection,
+    defaultJobOptions: {
+        attempts: 3,
+        backoff: {
+            type: 'exponential',
+            delay: 30_000,
+        },
+    },
+});
 export const solutionQueue = new Queue('solution-generation', {
     connection: redisConnection,
     defaultJobOptions: {

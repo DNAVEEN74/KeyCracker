@@ -2,7 +2,103 @@ import { env } from '../config/env';
 
 const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent';
 
+const DAILY_QUOTA_BLOCK_MS = 10 * 60 * 1000;
+
+type GeminiQuotaViolation = {
+    quotaId?: string;
+};
+
+type GeminiErrorPayload = {
+    error?: {
+        code?: number;
+        message?: string;
+        status?: string;
+        details?: Array<{
+            violations?: GeminiQuotaViolation[];
+            retryDelay?: string;
+        }>;
+    };
+};
+
+type GeminiErrorOptions = {
+    statusCode: number;
+    retryDelayMs: number | null;
+    isRateLimited: boolean;
+    isDailyQuotaExceeded: boolean;
+};
+
+export class GeminiApiError extends Error {
+    statusCode: number;
+    retryDelayMs: number | null;
+    isRateLimited: boolean;
+    isDailyQuotaExceeded: boolean;
+
+    constructor(message: string, options: GeminiErrorOptions) {
+        super(message);
+        this.name = 'GeminiApiError';
+        this.statusCode = options.statusCode;
+        this.retryDelayMs = options.retryDelayMs;
+        this.isRateLimited = options.isRateLimited;
+        this.isDailyQuotaExceeded = options.isDailyQuotaExceeded;
+    }
+}
+
+const blockState: {
+    blockedUntil: number;
+    isDailyQuota: boolean;
+} = {
+    blockedUntil: 0,
+    isDailyQuota: false,
+};
+
+function parseRetryDelayToMs(retryDelay: string | undefined): number | null {
+    if (!retryDelay) return null;
+    const match = retryDelay.trim().match(/^([\d.]+)s$/i);
+    if (!match) return null;
+    const seconds = parseFloat(match[1]);
+    if (!Number.isFinite(seconds) || seconds <= 0) return null;
+    return Math.ceil(seconds * 1000);
+}
+
+function extractRetryDelayMs(payload: GeminiErrorPayload): number | null {
+    const details = payload?.error?.details ?? [];
+    for (const detail of details) {
+        const delayMs = parseRetryDelayToMs(detail.retryDelay);
+        if (delayMs) return delayMs;
+    }
+    return null;
+}
+
+function extractDailyQuotaExceeded(payload: GeminiErrorPayload): boolean {
+    const details = payload?.error?.details ?? [];
+    return details.some((detail) =>
+        (detail.violations ?? []).some((violation) => /PerDay/i.test(violation.quotaId ?? ''))
+    );
+}
+
+function parseGeminiPayload(errorText: string): GeminiErrorPayload {
+    try {
+        return JSON.parse(errorText) as GeminiErrorPayload;
+    } catch {
+        return {};
+    }
+}
+
+function throwIfGeminiBlocked() {
+    const remainingMs = blockState.blockedUntil - Date.now();
+    if (remainingMs <= 0) return;
+
+    throw new GeminiApiError('Gemini API is temporarily blocked due to previous rate limiting.', {
+        statusCode: 429,
+        retryDelayMs: remainingMs,
+        isRateLimited: true,
+        isDailyQuotaExceeded: blockState.isDailyQuota,
+    });
+}
+
 export async function callGemini(apiKey: string, systemInstruction: string, prompt: string, responseMimeType: string = 'text/plain') {
+    throwIfGeminiBlocked();
+
     const response = await fetch(`${GEMINI_API_URL}?key=${apiKey}`, {
         method: 'POST',
         headers: {
@@ -24,8 +120,33 @@ export async function callGemini(apiKey: string, systemInstruction: string, prom
 
     if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(`Gemini API Error: ${response.status} - ${errorText}`);
+        const payload = parseGeminiPayload(errorText);
+        const retryDelayMs = extractRetryDelayMs(payload);
+        const isRateLimited = response.status === 429 || payload.error?.status === 'RESOURCE_EXHAUSTED';
+        const isDailyQuotaExceeded = extractDailyQuotaExceeded(payload);
+        const retryWindowMs = retryDelayMs
+            ? (isDailyQuotaExceeded ? Math.max(retryDelayMs, DAILY_QUOTA_BLOCK_MS) : retryDelayMs)
+            : (isDailyQuotaExceeded ? DAILY_QUOTA_BLOCK_MS : null);
+
+        if (isRateLimited && retryWindowMs) {
+            blockState.blockedUntil = Date.now() + retryWindowMs;
+            blockState.isDailyQuota = isDailyQuotaExceeded;
+        } else if (Date.now() >= blockState.blockedUntil) {
+            blockState.blockedUntil = 0;
+            blockState.isDailyQuota = false;
+        }
+
+        const apiMessage = payload.error?.message ?? errorText;
+        throw new GeminiApiError(`Gemini API Error: ${response.status} - ${apiMessage}`, {
+            statusCode: response.status,
+            retryDelayMs,
+            isRateLimited,
+            isDailyQuotaExceeded,
+        });
     }
+
+    blockState.blockedUntil = 0;
+    blockState.isDailyQuota = false;
 
     const data = await response.json();
     const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
@@ -178,6 +299,75 @@ Provide a step-by-step solution. Start DIRECTLY with Step 1 — no preamble or i
     `.trim();
 
     return await callGemini(env.GEMINI_SOLUTIONS_API_KEY, solutionPromptInstruction, prompt, 'text/plain');
+}
+
+export type QuestionImageSolution = {
+    questionId: string;
+    optionIds: Record<string, string>;
+    correctOptionId: string;
+    correctOptionNumber: string;
+    solutionMarkdown: string;
+    questionText?: string;
+};
+
+function parseStrictJson<T>(raw: string): T {
+    const trimmed = raw.trim();
+    const fenceMatch = trimmed.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
+    const candidate = fenceMatch ? fenceMatch[1].trim() : trimmed;
+    return JSON.parse(candidate) as T;
+}
+
+const imageSolutionPromptInstruction = `
+You are given a single exam question image from an Indian government exam response sheet.
+Extract structured data and provide a short, direct step-by-step solution.
+
+Return ONLY strict JSON with this shape:
+{
+  "questionId": "string",
+  "optionIds": { "1": "string", "2": "string", "3": "string", "4": "string" },
+  "correctOptionId": "string",
+  "correctOptionNumber": "1|2|3|4",
+  "questionText": "string",
+  "solutionMarkdown": "markdown text"
+}
+
+Rules:
+1) If any required field is unreadable, return empty string for that field.
+2) Never add markdown code fences.
+3) Keep solution concise and directly answer the question.
+`;
+
+export async function generateSolutionFromQuestionImage(imageBase64: string): Promise<QuestionImageSolution> {
+    const response = await fetch(`${GEMINI_API_URL}?key=${env.GEMINI_SOLUTIONS_API_KEY}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            systemInstruction: { parts: [{ text: imageSolutionPromptInstruction }] },
+            contents: [{
+                parts: [
+                    { inlineData: { mimeType: 'image/png', data: imageBase64 } },
+                    { text: 'Extract the required JSON fields from this question image.' }
+                ]
+            }],
+            generationConfig: {
+                responseMimeType: 'application/json',
+                temperature: 0.1,
+            }
+        }),
+    });
+
+    if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Gemini question-image API Error: ${response.status} - ${errorText}`);
+    }
+
+    const data = await response.json();
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!text) {
+        throw new Error('Gemini returned an empty response for question image parsing.');
+    }
+
+    return parseStrictJson<QuestionImageSolution>(text);
 }
 
 const parsePdfPromptInstruction = `

@@ -1,8 +1,7 @@
 import { buildApp } from './app';
 
-// Import workers to initialize them — without these imports, workers never start consuming jobs from the queue
-import './workers/schema-worker';
-import './workers/parsing-worker';
+// Worker initialization.
+import './workers/image-pipeline-worker';
 import './workers/solution-worker';
 
 const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3001;
@@ -20,3 +19,4 @@ async function start() {
 }
 
 start();
+

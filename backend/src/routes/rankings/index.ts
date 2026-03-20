@@ -2,7 +2,7 @@ import { FastifyInstance } from 'fastify';
 import { prisma } from '../../config/database';
 
 export default async function rankingsRoutes(server: FastifyInstance) {
-    server.get('/:examId', async (request, reply) => {
+    server.get('/:examId', async (request: any, reply: any) => {
         const { examId } = request.params as { examId: string };
         const { sessionToken } = request.query as { sessionToken?: string };
 
@@ -83,7 +83,7 @@ export default async function rankingsRoutes(server: FastifyInstance) {
         }
     });
 
-    server.get('/:examId/leaderboard', async (request, reply) => {
+    server.get('/:examId/leaderboard', async (request: any, reply: any) => {
         const { examId } = request.params as { examId: string };
 
         // Simply wrap the existing logic for the public leaderboard

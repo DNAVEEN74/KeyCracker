@@ -1,8 +1,7 @@
 import { FastifyInstance } from 'fastify';
 import { prisma } from '../../config/database';
-import crypto from 'crypto';
-import { schemaQueue } from '../../queues';
-import { fetchTcsIonResponseSheet } from '../../services/tcsIonFetcher.service';
+import * as crypto from 'crypto';
+import { imagePipelineQueue } from '../../queues';
 
 // Need to implement auth middleware to inject user session or we will just use tokens directly
 
@@ -47,6 +46,7 @@ export default async function sessionRoutes(server: FastifyInstance) {
                     sessionToken,
                     examId: exam.id, // Use the actual CUID from the DB, not the original URL slug
                     parsingStatus: 'pending',
+                    processingStage: null,
                     expiresAt,
                 },
             });
@@ -81,6 +81,11 @@ export default async function sessionRoutes(server: FastifyInstance) {
                 correctResponses: session.correctCount,
                 wrongResponses: session.wrongCount,
                 skippedResponses: session.skippedCount,
+                examPrimingProgress: session.totalQuestionsDetected > 0
+                    ? `${session.processedQuestions}/${session.totalQuestionsDetected}`
+                    : null,
+                isFirstTimeExam: session.isFirstTimeExam,
+                processingStage: session.processingStage,
             };
         } catch (error) {
             server.log.error(error);
@@ -109,18 +114,22 @@ export default async function sessionRoutes(server: FastifyInstance) {
             // Set parsing status
             await prisma.userSession.update({
                 where: { id: session.id },
-                data: { parsingStatus: 'parsing' },
+                data: {
+                    parsingStatus: 'processing',
+                    processingStage: 'processing',
+                    processedQuestions: 0,
+                    totalQuestionsDetected: 0,
+                },
             });
 
-            // Enqueue Schema Extraction Worker but pass the Base64 directly
-            await schemaQueue.add('schema-extraction', {
-                examId: session.examId,
+            // Enqueue the new image-first processing worker.
+            await imagePipelineQueue.add('image-pipeline', {
                 sessionId: session.id,
-                pdfUrl: pdfBase64 // We're passing the base64 string inside the pdfUrl variable for MVP
+                pdfBase64,
             });
 
             return {
-                message: 'PDF successfully queued for AI processing',
+                message: 'PDF successfully queued for image-first processing',
                 status: 'queued'
             };
         } catch (error) {
@@ -129,49 +138,9 @@ export default async function sessionRoutes(server: FastifyInstance) {
         }
     });
 
-    server.post('/:token/parse', async (request: any, reply: any) => {
-        const { token } = (request.params as any) || {};
-        const { url } = (request.body as any) || {};
-
-        if (!url) {
-            return reply.code(400).send({ error: 'URL is required' });
-        }
-
-        try {
-            const session = await prisma.userSession.findUnique({ where: { sessionToken: token } });
-            if (!session) return reply.code(404).send({ error: 'Session not found' });
-
-            // 1. Fetch the URL content
-            const { content, contentType } = await fetchTcsIonResponseSheet(url);
-
-            // 2. We will save the HTML to S3 or just pass it in job for MVP. 
-            // In a real app, large HTML should go to S3. We'll simulate S3 upload by passing the URL to workers, 
-            // but the worker actually needs the HTML. Let's just save externalUrl in DB and worker will fetch it, OR we pass it.
-            // Since `fetchTcsIonResponseSheet` worked, we know it's accessible. So the worker can fetch it again, 
-            // OR for safety we store `externalUrl` and let worker do the fetch.
-            // But we already fetched it to validate. Let's just pass `externalUrl` to worker.
-
-            await prisma.userSession.update({
-                where: { id: session.id },
-                data: {
-                    parsingStatus: 'parsing',
-                    externalUrl: url
-                },
-            });
-
-            await schemaQueue.add('schema-extraction', {
-                examId: session.examId,
-                sessionId: session.id,
-                externalUrl: url,
-            });
-
-            return {
-                status: 'queued',
-                message: 'URL successfully parsed and queued for AI analysis',
-            };
-        } catch (error) {
-            server.log.error(error);
-            return reply.code(500).send({ error: error instanceof Error ? error.message : 'Failed to parse URL' });
-        }
+    server.post('/:token/parse', async (_request: any, reply: any) => {
+        return reply.code(410).send({
+            error: 'URL parsing flow has been retired. Use PDF upload with the image-first pipeline.',
+        });
     });
 }

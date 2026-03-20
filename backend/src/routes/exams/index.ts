@@ -2,7 +2,7 @@ import { FastifyInstance } from 'fastify';
 import { prisma } from '../../config/database';
 
 export default async function examRoutes(server: FastifyInstance) {
-    server.get('/', async (request, reply) => {
+    server.get('/', async (request: any, reply: any) => {
         try {
             const exams = await prisma.exam.findMany({
                 orderBy: { examDate: 'desc' },
@@ -14,7 +14,7 @@ export default async function examRoutes(server: FastifyInstance) {
         }
     });
 
-    server.get('/:slug', async (request, reply) => {
+    server.get('/:slug', async (request: any, reply: any) => {
         const { slug } = request.params as { slug: string };
 
         try {

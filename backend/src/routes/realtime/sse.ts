@@ -1,10 +1,9 @@
-import { FastifyRequest, FastifyReply } from 'fastify';
 import { createClient } from 'redis';
 import { env } from '../../config/env';
 
 export async function sseHandler(
-    req: FastifyRequest<{ Params: { examId: string } }>,
-    reply: FastifyReply
+    req: any,
+    reply: any
 ) {
     const { examId } = req.params;
     const sessionToken = req.headers['x-session-token'] as string;

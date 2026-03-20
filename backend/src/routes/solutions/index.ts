@@ -2,7 +2,7 @@ import { FastifyInstance } from 'fastify';
 import { prisma } from '../../config/database';
 
 export default async function solutionRoutes(server: FastifyInstance) {
-    server.get('/:examId', async (request, reply) => {
+    server.get('/:examId', async (request: any, reply: any) => {
         const { examId } = request.params as { examId: string };
 
         try {
@@ -17,7 +17,7 @@ export default async function solutionRoutes(server: FastifyInstance) {
         }
     });
 
-    server.get('/:examId/:questionNumber', async (request, reply) => {
+    server.get('/:examId/:questionNumber', async (request: any, reply: any) => {
         const { examId, questionNumber } = request.params as { examId: string; questionNumber: string };
 
         try {

@@ -33,6 +33,8 @@ export default function AnalysisPage({ params }: { params: Promise<{ slug: strin
     type SessionData = {
         examId: string;
         parsingStatus: string;
+        processingStage?: string | null;
+        examPrimingProgress?: string | null;
         totalScore: number;
         correctCount?: number;
         wrongCount?: number;
@@ -119,7 +121,7 @@ export default function AnalysisPage({ params }: { params: Promise<{ slug: strin
     }
 
     const parsingStatus = data.parsingStatus;
-    const isProcessing = parsingStatus === 'pending' || parsingStatus === 'parsing';
+    const isProcessing = ['pending', 'parsing', 'processing', 'awaiting_exam_priming', 'evaluating_attempt'].includes(parsingStatus);
 
     const totalScore = Number(data.totalScore ?? 0);
     const correctCount = Number(data.correctCount ?? data.correctResponses ?? 0);

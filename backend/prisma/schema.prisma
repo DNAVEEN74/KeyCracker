@@ -12,6 +12,13 @@ model Exam {
   slug              String               @unique // "ssc-cgl-2026-tier-1"
   name              String               // "SSC CGL 2026 Tier 1"
   board             String               // "SSC", "RRB", "NTA", "GATE", "CAT"
+  identityHash      String?              @unique
+  normalizedTitle   String?
+  normalizedDate    String?
+  normalizedTime    String?
+  normalizedSubject String?
+  headerImageUrl    String?
+  examState         String               @default("ready") // "priming" | "ready" | "failed"
   examDate          DateTime
   totalQuestions    Int
   totalMarks        Float
@@ -30,6 +37,7 @@ model Exam {
 
   @@index([board, examDate])
   @@index([slug])
+  @@index([normalizedTitle, normalizedDate, normalizedTime, normalizedSubject])
 }
 
 model ExamSchema {
@@ -59,6 +67,10 @@ model UserSession {
   externalUrl       String?              // Original URL if pasted
   parsingStatus     String               // "pending", "parsing", "completed", "failed"
   schemaUsed        String?              // Which schema version was used
+  processingStage   String?              // "processing", "awaiting_exam_priming", "evaluating_attempt"
+  totalQuestionsDetected Int             @default(0)
+  processedQuestions Int                 @default(0)
+  isFirstTimeExam   Boolean              @default(false)
 
   totalScore        Float                @default(0)
   correctCount      Int                  @default(0)
@@ -83,9 +95,12 @@ model UserAnswer {
   examId            String               // Denormalized for partitioning
 
   questionNumber    Int
+  questionId        String?
   questionText      String?              // Optional, extracted from PDF
   options           Json?                // { A: "text", B: "text", C: "text", D: "text" }
   userAnswer        String?              // "A", "B", "C", "D", null (skipped)
+  chosenOptionId    String?
+  rawStatus         String?
   correctAnswer     String               // "A", "B", "C", "D"
 
   isCorrect         Boolean
@@ -103,10 +118,16 @@ model Solution {
   examId            String
   exam              Exam                 @relation(fields: [examId], references: [id])
   questionNumber    Int
+  questionId        String?
 
   questionText      String               @db.Text
   options           Json                 // { A: "text", B: "text", C: "text", D: "text" }
   correctAnswer     String               // "A", "B", "C", "D"
+  optionIds         Json?
+  correctOptionId   String?
+  correctOptionNumber String?
+  questionImageUrl  String?
+  sourceImageIndex  Int?
 
   explanation       String               @db.Text // Gemini-generated explanation
   latexContent      String?              @db.Text // LaTeX for mathematical formulas
@@ -122,7 +143,9 @@ model Solution {
   updatedAt         DateTime             @updatedAt
 
   @@unique([examId, questionNumber])
+  @@unique([examId, questionId])
   @@index([examId, questionNumber])
+  @@index([examId, questionId])
   @@index([generationStatus])
 }
 

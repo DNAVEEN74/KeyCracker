@@ -5,7 +5,7 @@ import { prisma } from '../config/database';
 
 export const rankingWorker = new Worker(
     'ranking-calculation',
-    async (job) => {
+    async (job: any) => {
         const { examId } = job.data;
         console.log(`Syncing rankings for exam: ${examId}`);
 
