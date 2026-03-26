@@ -1,5 +1,8 @@
 # Indian Government Exam Answer Key Analyzer - Architecture Plan
 
+> [!NOTE]
+> URL-based response sheet parsing has been safely removed due to scalability restrictions. Only PDF Upload is currently supported. URL-based parsing will be re-added in a future scalable release.
+
 ## Context
 
 This platform addresses a critical need in the Indian competitive exam ecosystem. Every year, millions of students take government exams (SSC, RRB, NTA, GATE, CAT) and need to analyze their answer keys when released. Existing tools provide only basic score calculations without explanations or proper scaling infrastructure.

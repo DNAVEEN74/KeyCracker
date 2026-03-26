@@ -1,12 +1,13 @@
 import { buildApp } from './app';
+import { connectRedis } from './config/redis';
 
 // Worker initialization.
 import './workers/image-pipeline-worker';
-import './workers/solution-worker';
 
 const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3001;
 
 async function start() {
+    await connectRedis();
     const app = await buildApp();
 
     try {

@@ -34,6 +34,8 @@ export default function AnalysisPage({ params }: { params: Promise<{ slug: strin
         examId: string;
         parsingStatus: string;
         processingStage?: string | null;
+        processedQuestions?: number;
+        totalQuestionsDetected?: number;
         examPrimingProgress?: string | null;
         totalScore: number;
         correctCount?: number;
@@ -138,6 +140,37 @@ export default function AnalysisPage({ params }: { params: Promise<{ slug: strin
         return { positive, negative };
     })();
 
+    const getLoadingState = () => {
+        switch (data?.processingStage) {
+            case 'processing':
+                return {
+                    title: 'Extracting Origin Patterns',
+                    desc: 'Reading source imagery from the cryptographic payload via extraction agents.',
+                };
+            case 'awaiting_exam_priming':
+                return {
+                    title: 'Priming Global Exam Matrix',
+                    desc: `First-time exam detected. Generating AI solutions... ${data.processedQuestions || 0} / ${data.totalQuestionsDetected || '?'} questions solved. This may take a few minutes.`,
+                };
+            case 'evaluating_attempt':
+                return {
+                    title: 'Evaluating Student Attempt',
+                    desc: 'Comparing extracted user responses against the verified global answer matrix.',
+                };
+            case 'failed':
+                return {
+                    title: 'System Failure',
+                    desc: 'The cryptographic payload was corrupted or unreadable. Trace logging engaged.',
+                };
+            default:
+                return {
+                    title: 'Extracting Neural Data',
+                    desc: 'Mapping sheet topology. Synchronizing question metadata across global board parameters.',
+                };
+        }
+    };
+    const loadingState = getLoadingState();
+
     const insight = (() => {
         const statsMap = new Map<number, QuestionStat>();
         stats.forEach((s) => statsMap.set(s.questionNumber, s));
@@ -202,9 +235,9 @@ export default function AnalysisPage({ params }: { params: Promise<{ slug: strin
                                 <Loader2 className="w-16 h-16 text-rzp-blue animate-spin relative" />
                             </div>
                             <div className="space-y-3">
-                                <h2 className="text-3xl font-black uppercase tracking-tighter">Extracting Neural Data</h2>
+                                <h2 className="text-3xl font-black uppercase tracking-tighter">{loadingState.title}</h2>
                                 <p className="text-sm text-white/40 font-medium leading-relaxed uppercase tracking-wide">
-                                    Mapping sheet topology. Synchronizing question metadata across global board parameters.
+                                    {loadingState.desc}
                                 </p>
                             </div>
                             <div className="flex justify-center gap-2">

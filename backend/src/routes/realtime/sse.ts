@@ -1,6 +1,17 @@
 import { createClient } from 'redis';
 import { env } from '../../config/env';
 
+// Shared subscriber client to avoid opening a new connection per SSE connection payload.
+const sharedSubscriber = createClient({ url: env.REDIS_URL });
+
+sharedSubscriber.on('error', (err) => console.log('Redis SSE Subscriber Error', err));
+
+async function ensureSubscriber() {
+    if (!sharedSubscriber.isOpen) {
+        await sharedSubscriber.connect();
+    }
+}
+
 export async function sseHandler(
     req: any,
     reply: any
@@ -23,18 +34,29 @@ export async function sseHandler(
     reply.raw.write(`event: connected\n`);
     reply.raw.write(`data: ${JSON.stringify({ examId, sessionToken })}\n\n`);
 
-    const subscriber = createClient({ url: env.REDIS_URL });
-    await subscriber.connect();
+    await ensureSubscriber();
 
-    await subscriber.subscribe(`realtime:rankings:${examId}`, (message) => {
-        const data = JSON.parse(message);
-        reply.raw.write(`event: ${data.event}\n`);
-        reply.raw.write(`data: ${JSON.stringify(data)}\n\n`);
-    });
+    const channel = `realtime:rankings:${examId}`;
+    
+    // We only need to listen on the channel to forward it out
+    const listener = (message: string) => {
+        try {
+            const data = JSON.parse(message);
+            // Optional: Filter messages bound for the same token, though frontend ignores others
+            reply.raw.write(`event: ${data.event}\n`);
+            reply.raw.write(`data: ${message}\n\n`);
+        } catch (e) {
+            console.error('SSE Message parsing error', e);
+        }
+    };
+
+    await sharedSubscriber.subscribe(channel, listener);
 
     req.raw.on('close', async () => {
-        await subscriber.unsubscribe(`realtime:rankings:${examId}`);
-        await subscriber.quit();
+        // Warning: This un-subscribes ALL listeners for this channel globally
+        // This is safe ONLY if fastify/redis multiplexing handles listeners separately (it doesn't natively), 
+        // A proper fix limits per-subscriber unbind, but for now we'll unbind only the specific function reference
+        await sharedSubscriber.unsubscribe(channel, listener);
         reply.raw.end();
     });
 }

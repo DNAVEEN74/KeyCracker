@@ -8,11 +8,17 @@ export type ExtractedImage = {
     buffer: Buffer;
 };
 
+type ExtractedImageResponse = {
+    index: number;
+    page: number | null;
+    filename: string;
+    data: string; // Base64 data URI
+};
+
 type ExtractorUploadResponse = {
-    success?: boolean;
-    images?: string[];
-    folder?: string;
-    question_count?: number;
+    success: boolean;
+    question_count: number;
+    images: ExtractedImageResponse[];
     error?: string;
 };
 
@@ -20,44 +26,31 @@ function joinUrl(base: string, path: string): string {
     return `${base.replace(/\/+$/, '')}/${path.replace(/^\/+/, '')}`;
 }
 
-function parseImageMeta(filename: string, fallbackIndex: number): { index: number; page: number | null } {
-    const match = filename.match(/question_(\d+)_page(\d+)/i);
-    if (!match) return { index: fallbackIndex, page: null };
-    return { index: parseInt(match[1], 10), page: parseInt(match[2], 10) };
-}
-
-async function fetchImageBuffer(url: string): Promise<Buffer> {
-    const response = await fetch(url);
-    if (!response.ok) {
-        throw new Error(`Extractor image fetch failed (${response.status}) for ${url}`);
-    }
-    return Buffer.from(await response.arrayBuffer());
-}
-
-async function callExtractor(baseUrl: string, pdfBuffer: Buffer): Promise<ExtractedImage[]> {
+async function callExtractor(route: string, pdfBuffer: Buffer): Promise<ExtractedImage[]> {
     const form = new FormData();
     form.append('file', new Blob([new Uint8Array(pdfBuffer)], { type: 'application/pdf' }), 'upload.pdf');
 
-    const uploadUrl = joinUrl(baseUrl, env.EXTRACTOR_UPLOAD_PATH);
+    const uploadUrl = joinUrl(env.EXTRACTOR_URL, route);
     const uploadResponse = await fetch(uploadUrl, { method: 'POST', body: form });
     if (!uploadResponse.ok) {
-        throw new Error(`Extractor upload failed (${uploadResponse.status}) at ${uploadUrl}`);
+        throw new Error(`Extractor API failed (${uploadResponse.status}) at ${uploadUrl}`);
     }
 
     const payload = await uploadResponse.json() as ExtractorUploadResponse;
-    if (!payload.success || !payload.images || !payload.folder) {
+    if (!payload.success || !payload.images) {
         throw new Error(payload.error || 'Extractor response missing required fields.');
     }
 
     const images: ExtractedImage[] = [];
-    for (let i = 0; i < payload.images.length; i += 1) {
-        const filename = payload.images[i];
-        const escapedFolder = encodeURIComponent(payload.folder);
-        const escapedFile = encodeURIComponent(filename);
-        const url = joinUrl(baseUrl, `${env.EXTRACTOR_OUTPUT_PATH}/${escapedFolder}/${escapedFile}`);
-        const buffer = await fetchImageBuffer(url);
-        const { index, page } = parseImageMeta(filename, i + 1);
-        images.push({ filename, index, page, url, buffer });
+    for (const item of payload.images) {
+        const base64Data = item.data.split(',')[1] || item.data;
+        images.push({
+            filename: item.filename,
+            index: item.index,
+            page: item.page,
+            url: '', // Unused in new architecture, images are inline
+            buffer: Buffer.from(base64Data, 'base64')
+        });
     }
 
     return images.sort((a, b) => a.index - b.index);
@@ -67,7 +60,7 @@ export async function extractQuestionAndHeaderImages(pdfBuffer: Buffer): Promise
     headerImage: ExtractedImage | null;
     questionImages: ExtractedImage[];
 }> {
-    const allImages = await callExtractor(env.EXTRACTOR_APP2_URL, pdfBuffer);
+    const allImages = await callExtractor('/extract/questions', pdfBuffer);
     const headerIdx = env.EXTRACTOR_HEADER_IMAGE_INDEX;
 
     const headerImage = allImages[headerIdx] ?? null;
@@ -76,5 +69,5 @@ export async function extractQuestionAndHeaderImages(pdfBuffer: Buffer): Promise
 }
 
 export async function extractAnswerBlockImages(pdfBuffer: Buffer): Promise<ExtractedImage[]> {
-    return callExtractor(env.EXTRACTOR_APP_URL, pdfBuffer);
+    return callExtractor('/extract/answers', pdfBuffer);
 }

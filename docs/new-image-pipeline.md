@@ -1,5 +1,8 @@
 # KeyCracker New Image-First Pipeline
 
+> [!NOTE]
+> URL-based response sheet parsing has been safely removed due to scalability restrictions. Only PDF Upload is currently supported. URL-based parsing will be re-added in a future scalable release.
+
 ## 1. Purpose
 This document defines the new backend architecture for parsing exam response-sheet PDFs using image extraction first, then OCR + AI, with strong reuse across repeated uploads of the same exam.
 

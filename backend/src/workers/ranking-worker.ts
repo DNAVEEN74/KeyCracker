@@ -23,7 +23,7 @@ export const rankingWorker = new Worker(
             );
         }
 
-        await Promise.all(updates);
+        await prisma.$transaction(updates);
 
         return { updatedCount: updates.length };
     },

@@ -2,8 +2,7 @@ import { FastifyInstance } from 'fastify';
 import { prisma } from '../../config/database';
 import * as crypto from 'crypto';
 import { imagePipelineQueue } from '../../queues';
-
-// Need to implement auth middleware to inject user session or we will just use tokens directly
+import { uploadFileToR2 } from '../../services/r2.service';
 
 export default async function sessionRoutes(server: FastifyInstance) {
     server.post('/', async (request: any, reply: any) => {
@@ -32,7 +31,8 @@ export default async function sessionRoutes(server: FastifyInstance) {
                         totalQuestions: 100,
                         totalMarks: 200,
                         duration: 120,
-                        markingScheme: { correct: 2, wrong: -0.5, unattempted: 0 }
+                        markingScheme: { correct: 2, wrong: -0.5, unattempted: 0 },
+                        examState: 'placeholder'
                     }
                 });
             }
@@ -74,6 +74,10 @@ export default async function sessionRoutes(server: FastifyInstance) {
             });
 
             if (!session) return reply.code(404).send({ error: 'Session not found' });
+            
+            if (session.expiresAt < new Date()) {
+                return reply.code(410).send({ error: 'Session expired' });
+            }
 
             return {
                 ...session,
@@ -107,11 +111,21 @@ export default async function sessionRoutes(server: FastifyInstance) {
                 return reply.code(400).send({ error: 'No PDF file uploaded' });
             }
 
-            // Convert PDF buffer to Base64 in memory
+            // Convert PDF buffer safely
             const buffer = await data.toBuffer();
-            const pdfBase64 = buffer.toString('base64');
+            
+            // Upload to S3/R2 directly to avoid Redis payload explosion
+            const pdfKey = `sessions/${session.id}/upload.pdf`;
+            await uploadFileToR2(pdfKey, buffer, 'application/pdf');
 
-            // Set parsing status
+            // Enqueue job FIRST before marking status (fix race condition/fail state)
+            await imagePipelineQueue.add('image-pipeline', {
+                sessionId: session.id,
+                examId: session.examId,
+                pdfKey,
+            });
+
+            // Set parsing status only after successful enqueue
             await prisma.userSession.update({
                 where: { id: session.id },
                 data: {
@@ -119,28 +133,25 @@ export default async function sessionRoutes(server: FastifyInstance) {
                     processingStage: 'processing',
                     processedQuestions: 0,
                     totalQuestionsDetected: 0,
+                    pdfUrl: pdfKey,
                 },
             });
 
-            // Enqueue the new image-first processing worker.
-            await imagePipelineQueue.add('image-pipeline', {
-                sessionId: session.id,
-                pdfBase64,
-            });
-
             return {
-                message: 'PDF successfully queued for image-first processing',
+                message: 'PDF successfully queued for processing',
                 status: 'queued'
             };
         } catch (error) {
             server.log.error(error);
-            return reply.code(500).send({ error: 'Failed to initiate upload' });
+            
+            try {
+                await prisma.userSession.update({
+                    where: { sessionToken: token },
+                    data: { parsingStatus: 'failed', processingStage: 'failed' }
+                });
+            } catch(e) {}
+            
+            return reply.code(500).send({ error: error instanceof Error ? error.message : 'Failed to initiate upload' });
         }
-    });
-
-    server.post('/:token/parse', async (_request: any, reply: any) => {
-        return reply.code(410).send({
-            error: 'URL parsing flow has been retired. Use PDF upload with the image-first pipeline.',
-        });
     });
 }

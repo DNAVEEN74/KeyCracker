@@ -49,3 +49,38 @@ export async function uploadImageToR2(key: string, buffer: Buffer, contentType: 
     return buildPublicUrl(key);
 }
 
+export async function uploadFileToR2(key: string, buffer: Buffer, contentType: string = 'application/pdf'): Promise<string> {
+    ensureConfigured();
+    const s3 = getClient();
+
+    await s3.send(new PutObjectCommand({
+        Bucket: env.R2_BUCKET_NAME,
+        Key: key,
+        Body: buffer,
+        ContentType: contentType,
+        CacheControl: 'private, max-age=31536000, immutable',
+    }));
+
+    return buildPublicUrl(key);
+}
+
+import { GetObjectCommand } from '@aws-sdk/client-s3';
+
+export async function downloadFileFromR2(key: string): Promise<Buffer> {
+    ensureConfigured();
+    const s3 = getClient();
+
+    const response = await s3.send(new GetObjectCommand({
+        Bucket: env.R2_BUCKET_NAME,
+        Key: key,
+    }));
+
+    if (!response.Body) {
+        throw new Error(`Failed to download ${key} from R2`);
+    }
+
+    const arrayBuffer = await response.Body.transformToByteArray();
+    return Buffer.from(arrayBuffer);
+}
+
+

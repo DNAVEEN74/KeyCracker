@@ -1,5 +1,8 @@
 # Parsing Architecture (DigiAlm HTML + PDF Upload)
 
+> [!NOTE]
+> URL-based response sheet parsing has been safely removed due to scalability restrictions. Only PDF Upload is currently supported. URL-based parsing will be re-added in a future scalable release.
+
 ## Goal
 Support two input types with a single queue-based backend pipeline:
 
