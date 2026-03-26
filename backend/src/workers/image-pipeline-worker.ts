@@ -362,36 +362,42 @@ export const imagePipelineWorker = new Worker(
                 else wrongCount += 1;
             }
 
-            await Promise.all(answerRows.map((row) => prisma.questionStatistics.upsert({
-                where: {
-                    examId_questionNumber: {
+            try {
+                // Avoid Prisma pool exhaustion by running stats upserts in one transaction
+                // and only for deduplicated rows.
+                await prisma.$transaction(uniqueAnswerRows.map((row) => prisma.questionStatistics.upsert({
+                    where: {
+                        examId_questionNumber: {
+                            examId: exam.id,
+                            questionNumber: row.questionNumber,
+                        }
+                    },
+                    create: {
                         examId: exam.id,
                         questionNumber: row.questionNumber,
-                    }
-                },
-                create: {
-                    examId: exam.id,
-                    questionNumber: row.questionNumber,
-                    totalAttempts: 1,
-                    correctAttempts: row.isCorrect ? 1 : 0,
-                    wrongAttempts: row.userAnswer != null && !row.isCorrect ? 1 : 0,
-                    skippedAttempts: row.userAnswer == null ? 1 : 0,
-                    accuracyRate: row.isCorrect ? 1 : 0,
-                },
-                update: {
-                    totalAttempts: { increment: 1 },
-                    correctAttempts: { increment: row.isCorrect ? 1 : 0 },
-                    wrongAttempts: { increment: row.userAnswer != null && !row.isCorrect ? 1 : 0 },
-                    skippedAttempts: { increment: row.userAnswer == null ? 1 : 0 },
-                },
-            })));
+                        totalAttempts: 1,
+                        correctAttempts: row.isCorrect ? 1 : 0,
+                        wrongAttempts: row.userAnswer != null && !row.isCorrect ? 1 : 0,
+                        skippedAttempts: row.userAnswer == null ? 1 : 0,
+                        accuracyRate: row.isCorrect ? 1 : 0,
+                    },
+                    update: {
+                        totalAttempts: { increment: 1 },
+                        correctAttempts: { increment: row.isCorrect ? 1 : 0 },
+                        wrongAttempts: { increment: row.userAnswer != null && !row.isCorrect ? 1 : 0 },
+                        skippedAttempts: { increment: row.userAnswer == null ? 1 : 0 },
+                    },
+                })));
 
-            // Fixed N+1 Race Condition: Atomically compute accuracyRate in one query
-            await prisma.$executeRawUnsafe(`
-                UPDATE "QuestionStatistics"
-                SET "accuracyRate" = CASE WHEN "totalAttempts" > 0 THEN ("correctAttempts"::float / "totalAttempts") ELSE 0 END
-                WHERE "examId" = $1;
-            `, exam.id);
+                // Fixed N+1 Race Condition: Atomically compute accuracyRate in one query
+                await prisma.$executeRawUnsafe(`
+                    UPDATE "QuestionStatistics"
+                    SET "accuracyRate" = CASE WHEN "totalAttempts" > 0 THEN ("correctAttempts"::float / "totalAttempts") ELSE 0 END
+                    WHERE "examId" = $1;
+                `, exam.id);
+            } catch (statsError) {
+                console.error('[ImagePipelineWorker] Question statistics update failed. Session completion will continue.', statsError);
+            }
 
             await updateSessionProgress(sessionId, {
                 examId: exam.id,
@@ -401,7 +407,7 @@ export const imagePipelineWorker = new Worker(
                 correctCount,
                 wrongCount,
                 skippedCount,
-                processedQuestions: answerRows.length,
+                processedQuestions: uniqueAnswerRows.length,
             });
 
             // Trigger Realtime SSE Event
@@ -415,7 +421,7 @@ export const imagePipelineWorker = new Worker(
                 console.error('Failed to dispatch SSE trigger', e);
             }
 
-            return { totalScore, questionCount: answerRows.length };
+            return { totalScore, questionCount: uniqueAnswerRows.length };
         } catch (error) {
             console.error('[ImagePipelineWorker] Processing failed:', error);
             await updateSessionProgress(sessionId, {
